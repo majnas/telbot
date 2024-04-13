@@ -41,7 +41,7 @@ def update_teams(text: str)-> None:
             team.n -= 1
 
 # Define states
-STATISTICS, SPENDER, AMOUNT, CAR_MILEAGE, PHOTO, SUMMARY = range(6)
+STATISTICS, SPENDER, AMOUNT, SUMMARY = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their preferred car type."""
@@ -59,8 +59,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "Apply":
-        user = update.message.from_user
-
+        # user = update.message.from_user
         # context.user_data['car_type'] = update.message.text
         # logger.info('Car type of %s: %s', user.first_name, update.message.text)
 
@@ -75,7 +74,6 @@ async def statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     else:
         ic(update.message.text)
         update_teams(text=update.message.text)
-        # print([ic(t) for t in TEAMS])
         reply_keyboard = [[t.minustext, str(t.n), t.addtext] for t in TEAMS]
         reply_keyboard += [["Apply"]]
 
@@ -83,103 +81,43 @@ async def statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             '<b>Set statistics\n</b>',
             parse_mode='HTML',
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True),
-        )ß
+        )
         return STATISTICS
         
 
 async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ic(update.message.text)
-    await update.edit_message_text(text='<b>Please type in the mileage (e.g., 50000):</b>', parse_mode='HTML')
+    context.user_data['spender'] = update.message.text
+    await update.message.reply_text(text='<b>Please type in the mileage (e.g., 50000):</b>', parse_mode='HTML')
     return AMOUNT
 
 
 async def amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Asks the user to fill in the mileage or skip."""
-    query = update.callback_query
-    await query.answer()
-    decision = query.data
-
-    if decision == 'Fill':
-        await query.edit_message_text(text='<b>Please type in the mileage (e.g., 50000):</b>', parse_mode='HTML')
-        return CAR_MILEAGE
-    else:
-        await query.edit_message_text(text='<b>Mileage step skipped.</b>', parse_mode='HTML')
-        return await skip_mileage(update, context)
-
-
-async def car_mileage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Stores the car mileage."""
-    context.user_data['car_mileage'] = update.message.text
-    await update.message.reply_text('<b>Mileage noted.\n'
-                                    'Please upload a photo of your car 📷, or send /skip.</b>',
-                                    parse_mode='HTML')
-    return PHOTO
-
-
-async def skip_mileage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Skips the mileage input."""
-    context.user_data['car_mileage'] = 'Not provided'
-
-    text = '<b>Please upload a photo of your car 📷, or send /skip.</b>'
-
-    # Determine the correct way to send a reply based on the update type
-    if update.callback_query:
-        # If called from a callback query, use the callback_query's message
-        chat_id = update.callback_query.message.chat_id
-        await context.bot.send_message(chat_id=chat_id, text=text, parse_mode='HTML')
-        # Optionally, you might want to acknowledge the callback query
-        await update.callback_query.answer()
-    elif update.message:
-        # If called from a direct message
-        await update.message.reply_text(text)
-    else:
-        # Handle other cases or log an error/warning
-        logger.warning('skip_mileage was called without a message or callback_query context.')
-
-    return PHOTO
-
-
-async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Stores the photo."""
-    photo_file = await update.message.photo[-1].get_file()
-    # Correctly store the file_id of the uploaded photo for later use
-    context.user_data['car_photo'] = photo_file.file_id  # Preserve this line
-
+    ic("amount")
+    context.user_data['amount'] = update.message.text
+    ic(update.message.text)
+    ic(context.user_data)
+    # print report
     # Inform user and transition to summary
-    await update.message.reply_text('<b>Photo uploaded successfully.\n'
-                                    'Let\'s summarize your selections.</b>',
-                                    parse_mode='HTML'
-    )
+    # await update.message.reply_text('<b>Photo uploaded successfully.\n'
+    #                                 'Let\'s summarize your selections.</b>',
+    #                                 parse_mode='HTML'
+    # )
     await summary(update, context)  # Proceed to summary
-
-
-async def skip_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Skips the photo upload."""
-    await update.message.reply_text('<b>No photo uploaded.\n'
-                                    'Let\'s summarize your selections.</b>',
-                                    parse_mode='HTML')
-    await summary(update, context)
-
+    
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Summarizes the user's selections and ends the conversation, including the uploaded image."""
     selections = context.user_data
     # Construct the summary text
     summary_text = (f"<b>Here's what you told me about your car:\n</b>"
-                    f"<b>Car Type:</b> {selections.get('car_type')}\n"
-                    f"<b>Color:</b> {selections.get('car_color')}\n"
-                    f"<b>Mileage:</b> {selections.get('car_mileage')}\n"
+                    f"<b>Spender:</b> {selections.get('spender')}\n"
+                    f"<b>Amount:</b> {selections.get('amount')}\n"
                     f"<b>Photo:</b> {'Uploaded' if 'car_photo' in selections else 'Not provided'}")
 
     chat_id = update.effective_chat.id
-
-    # If a photo was uploaded, send it back with the summary as the caption
-    if 'car_photo' in selections and selections['car_photo'] != 'Not provided':
-        await context.bot.send_photo(chat_id=chat_id, photo=selections['car_photo'], caption=summary_text, parse_mode='HTML')
-    else:
-        # If no photo was uploaded, just send the summary text
-        await context.bot.send_message(chat_id=chat_id, text=summary_text, parse_mode='HTML')
-
+    # If no photo was uploaded, just send the summary text
+    await context.bot.send_message(chat_id=chat_id, text=summary_text, parse_mode='HTML')
     return ConversationHandler.END
 
 
@@ -187,6 +125,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancels and ends the conversation."""
     await update.message.reply_text('Bye! Hope to talk to you again soon.', reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
+
 
 
 def main() -> None:
@@ -202,13 +141,8 @@ def main() -> None:
         entry_points=[CommandHandler('start', start)],
         states={
             STATISTICS: [MessageHandler(filters.TEXT & ~filters.COMMAND, statistics)],
-            SPENDER: [CallbackQueryHandler(spender)],
-            AMOUNT: [CallbackQueryHandler(amount)],
-            CAR_MILEAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, car_mileage)],
-            PHOTO: [
-                MessageHandler(filters.PHOTO, photo),
-                CommandHandler('skip', skip_photo)
-            ],
+            SPENDER: [MessageHandler(filters.TEXT & ~filters.COMMAND, spender)],
+            AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, amount)],
             SUMMARY: [MessageHandler(filters.ALL, summary)]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
