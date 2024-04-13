@@ -1,47 +1,265 @@
-import os
-import telegram.ext
-from dotenv import load_dotenv
+#!/usr/bin/env python
+# pylint: disable=unused-argument
+# This program is dedicated to the public domain under the CC0 license.
+
+"""
+First, a few callback functions are defined. Then, those functions are passed to
+the Application and registered at their respective places.
+Then, the bot is started and runs until we press Ctrl-C on the command line.
+
+Usage:
+Example of a bot-user conversation using nested ConversationHandlers.
+Send /start to initiate the conversation.
+Press Ctrl-C on the command line or send a signal to the process to stop the
+bot.
+"""
+
+import logging
+from typing import Any, Dict, Tuple
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+)
 from icecream import ic
+from dataclasses import dataclass
+from typing import List
+from db import RDB
 
-load_dotenv()
-TOKEN = os.getenv("TOKEN")
 
-def start(update, context):
-    update.message.reply_text("Hello Regent Guys!")
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+# set higher logging level for httpx to avoid all GET and POST requests being logged
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
-def help(update, context):
-    update.message.reply_text(
-        """
-        Hello Regent Guys!
-        /start - to start
-        /help - to get help
-        /newrec - new records
-        /report - get report
-        """
+logger = logging.getLogger(__name__)
+
+# State definitions for top level conversation
+NEW_RECORD, STATISTICS, HOWMUCH, DESCRIBING_SELF = map(chr, range(4))
+# State definitions for second level conversation
+SELECTING_LEVEL, SELECTING_GENDER = map(chr, range(4, 6))
+# State definitions for descriptions conversation
+SELECTING_FEATURE, TYPING = map(chr, range(6, 8))
+# Meta states
+STOPPING, REPORT = map(chr, range(8, 10))
+# mystates
+REPORT, EXPORT = map(chr, range(10, 12))
+# Shortcut for ConversationHandler.END
+END = ConversationHandler.END
+
+# Different constants for this example
+(
+    DB,
+    SELECT_ACTION,
+    SPENDER,
+    DONE,   
+    TEAMS,
+    PARENTS,
+    CHILDREN,
+    SELF,
+    GENDER,
+    MALE,
+    FEMALE,
+    AGE,
+    NAME,
+    START_OVER,
+    FEATURES,
+    CURRENT_FEATURE,
+    CURRENT_LEVEL,
+) = map(chr, range(13, 30))
+
+
+@dataclass
+class Team:
+    name: str
+    dad: str
+    mon: str
+    n: 2
+    addtext: str
+    minustext: str
+    icon: None
+    def __str__(self) -> str:
+        return f"{self.name} {self.n}"
+
+
+@dataclass
+class Record:
+    idx: int
+    uid: str
+    user: str
+    spender: str
+    houmuch: float
+
+
+TEAMS_DEFAULT: List[Team] = []
+TEAMS_DEFAULT.append(Team("Majid", "Majid", "Safoura", 3, "Majid+", "Majid-", "🚗"))
+TEAMS_DEFAULT.append(Team("Mammad", "Mammad", "Saba", 3, "Mammad+", "Mammad-",  "🚙"))
+TEAMS_DEFAULT.append(Team("Hossein", "Hossein", "Parisa", 2, "Hossein+", "Hossein-","🏎️"))
+TEAMS_DEFAULT.append(Team("Aref", "Aref", "Nafise", 2, "Aref+", "Aref-", "🚕"))
+TEAMS_DEFAULT.append(Team("Masoud", "Masoud", "Mahshid", 2, "Masoud+", "Masoud-", "🚛"))
+
+
+
+def update_teams(teams: dict, text: str)-> None:
+    for team in teams:
+        if text == team.addtext:
+            team.n += 1 
+        elif text == team.minustext:
+            team.n -= 1
+
+# Top level conversation callbacks
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    """Select an action: Adding parent/child or show data."""
+    ic("start")
+
+    # Create an instance of RecordsDB
+    db = RDB('records.db')
+    context.user_data[DB] = db
+
+    keyboard = [["Report"],
+                ["New"],
+                ["Done"]]
+    await update.message.reply_text(
+        '<b>Setect Action:\n</b>',
+        parse_mode='HTML',
+        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True))
+
+    context.user_data[TEAMS] = TEAMS_DEFAULT
+    context.user_data["records"] = []
+    return SELECT_ACTION
+
+
+
+async def update_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    ic("update_statistics")
+    ic(update.message.text)
+    ic(context.user_data)
+    if update.message.text != "New":
+        update_teams(context.user_data[TEAMS], update.message.text)
+
+    # [ic(t) for t in context.user_data[TEAMS]]
+
+    keyboard = [[t.minustext, str(t.n), t.addtext] for t in context.user_data[TEAMS]]
+    keyboard += [["Done"]]
+
+    await update.message.reply_text(
+        '<b>Set statistics:\n</b>',
+        parse_mode='HTML',
+        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True))
+
+    return STATISTICS
+
+
+async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    ic("spender")
+    keyboard = [[t.name] for t in context.user_data[TEAMS]]
+
+    await update.message.reply_text(
+        '<b>Who spend money?\n</b>',
+        parse_mode='HTML',
+        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True),
+    )
+    return SPENDER
+
+
+async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    ic("howmuch")
+    ic(update.message.text)
+    if update.message.text in [t.name for t in context.user_data[TEAMS]]:
+        context.user_data['spender'] = update.message.text
+        await update.message.reply_text(text=f"<b>How much have you spend?</b> {update.message.text}\n", parse_mode='HTML')
+    else:
+        await update.message.reply_text(text=f"<b>How much have you spend?</b> {context.user_data['spender']}\n", parse_mode='HTML')
+
+    return HOWMUCH
+
+
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ic("stop")
+    """End Conversation by command."""
+    await update.message.reply_text("Okay, bye.")
+
+    # Close the connection
+    context.user_data[DB].close_connection()
+
+    return END
+
+
+# async def end(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     ic("end")
+#     """End conversation from InlineKeyboardButton."""
+#     await update.callback_query.answer()
+
+#     text = "See you around!"
+#     await update.callback_query.edit_message_text(text=text)
+
+#     return END
+
+
+async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ic("store")
+    """Report conversation from InlineKeyboardButton."""
+    spender = context.user_data['spender']
+    howmuch = float(update.message.text)
+    # Insert a new record
+    context.user_data[DB].insert_record("2", "user", spender, howmuch, "cid")
+    return REPORT
+
+
+async def report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ic("report")
+    """Report conversation from InlineKeyboardButton."""
+    # Load all records
+    records = context.user_data[DB].load_records()
+    for record in records:
+        ic(record)
+    return END
+
+
+def main() -> None:
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    TOKEN = os.getenv("TOKEN")
+
+    """Run the bot."""
+    # Create the Application and pass it your bot's token.
+    application = Application.builder().token(TOKEN).build()
+
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            SELECT_ACTION: [MessageHandler(filters.Regex(r'^Report$'), report),
+                            MessageHandler(filters.Regex(r'^New$'), update_statistics),
+                            CallbackQueryHandler(stop, pattern="^Done$")],
+
+            STATISTICS: [MessageHandler(filters.Regex(r'^(?!Done).*$'), update_statistics),
+                         MessageHandler(filters.Regex(r'^Done$'), spender)],
+
+            SPENDER: [MessageHandler(filters.TEXT & ~filters.COMMAND, howmuch)],
+
+            HOWMUCH: [MessageHandler(filters.Regex(r'^\d+$'), store),
+                      MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r'^\d+$'), howmuch)],
+
+            REPORT: [CommandHandler("stop", stop)],
+        },
+        fallbacks=[CommandHandler("stop", stop)],
     )
 
-def new(update, context):
-    # Get the username or display name of the user who sent the command
-    user_name = update.effective_user.username or update.effective_user.first_name
-    update.message.reply_text(f"{user_name} is requesting a new number. Please enter a number:")
 
-def get_number(update, context):
-    user_name = update.effective_user.username or update.effective_user.first_name
-    try:
-        number = int(update.message.text)
-        update.message.reply_text(f"{user_name} entered: {number}")
-    except ValueError:
-        update.message.reply_text("Please enter a valid number.")
+    application.add_handler(conv_handler)
 
-updater = telegram.ext.Updater(TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+    # Run the bot until the user presses Ctrl-C
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-dispatcher.add_handler(telegram.ext.CommandHandler('start', start))
-dispatcher.add_handler(telegram.ext.CommandHandler('help', help))
-dispatcher.add_handler(telegram.ext.CommandHandler('new', new))
 
-# Add a message handler to capture the number from the user
-dispatcher.add_handler(telegram.ext.MessageHandler(telegram.ext.Filters.text & ~telegram.ext.Filters.command, get_number))
-
-updater.start_polling()
-updater.idle()
+if __name__ == "__main__":
+    main()
