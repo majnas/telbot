@@ -16,6 +16,7 @@ bot.
 
 import logging
 from typing import Any, Dict, Tuple
+from telegram.constants import ParseMode
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
 from telegram.ext import (
@@ -140,8 +141,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 
 async def update_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
     ic("update_statistics")
-    ic(update.message.text)
-    ic(context.user_data)
     if update.message.text != "New":
         update_teams(context.user_data[TEAMS], update.message.text)
 
@@ -190,7 +189,7 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Close the connection
     context.user_data[DB].close_connection()
 
-    return END
+    return STOPPING
 
 
 # async def end(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -207,21 +206,31 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ic("store")
     """Report conversation from InlineKeyboardButton."""
+    user = update.message.from_user
+    ic(user)
+    
     spender = context.user_data['spender']
     howmuch = float(update.message.text)
+
     # Insert a new record
-    context.user_data[DB].insert_record("2", "user", spender, howmuch, "cid")
-    return REPORT
+    context.user_data[DB].insert_record(user.first_name, spender, howmuch, "cid")
+    await report(update, context)
 
 
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ic("report")
-    """Report conversation from InlineKeyboardButton."""
-    # Load all records
-    records = context.user_data[DB].load_records()
-    for record in records:
-        ic(record)
-    return END
+    table = context.user_data[DB].get_table_as_string()
+
+    # https://stackoverflow.com/questions/49345960/how-do-i-send-tables-with-telegram-bot-api
+    # update.message.reply_text(f'<pre>{table}</pre>', parse_mode=ParseMode.HTML)
+    # await update.message.reply_text(f'<pre>{table}</pre>', parse_mode=ParseMode.HTML)
+    # or use markdown
+    await update.message.reply_text(f'```{table}```', parse_mode=ParseMode.MARKDOWN_V2)
+
+    # print(table_string)
+    # await update.message.reply_text(table_string)
+
+    return STOPPING
 
 
 def main() -> None:
@@ -239,7 +248,7 @@ def main() -> None:
         states={
             SELECT_ACTION: [MessageHandler(filters.Regex(r'^Report$'), report),
                             MessageHandler(filters.Regex(r'^New$'), update_statistics),
-                            CallbackQueryHandler(stop, pattern="^Done$")],
+                            MessageHandler(filters.Regex(r'^Done$'), stop)],
 
             STATISTICS: [MessageHandler(filters.Regex(r'^(?!Done).*$'), update_statistics),
                          MessageHandler(filters.Regex(r'^Done$'), spender)],
@@ -249,7 +258,7 @@ def main() -> None:
             HOWMUCH: [MessageHandler(filters.Regex(r'^\d+$'), store),
                       MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r'^\d+$'), howmuch)],
 
-            REPORT: [CommandHandler("stop", stop)],
+            STOPPING: [CommandHandler("start", start)],
         },
         fallbacks=[CommandHandler("stop", stop)],
     )
