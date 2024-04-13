@@ -41,7 +41,7 @@ def update_teams(text: str)-> None:
             team.n -= 1
 
 # Define states
-STATISTICS, CAR_COLOR, CAR_MILEAGE_DECISION, CAR_MILEAGE, PHOTO, SUMMARY = range(6)
+STATISTICS, SPENDER, AMOUNT, CAR_MILEAGE, PHOTO, SUMMARY = range(6)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about their preferred car type."""
@@ -60,26 +60,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "Apply":
         user = update.message.from_user
-        context.user_data['car_type'] = update.message.text
-        logger.info('Car type of %s: %s', user.first_name, update.message.text)
-        ic(update.message)
-        await update.message.reply_text(
-            f'<b>You selected {update.message.text} car {update.message.text}.\n'
-            f'What color your car is?</b>',
-            parse_mode='HTML',
-            reply_markup=ReplyKeyboardRemove(),
-        )
 
-        # Define inline buttons for car color selection
-        keyboard = [
-            [InlineKeyboardButton('Red', callback_data='Red')],
-            [InlineKeyboardButton('Blue', callback_data='Blue')],
-            [InlineKeyboardButton('Black', callback_data='Black')],
-            [InlineKeyboardButton('White', callback_data='White')],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text('<b>Please choose:</b>', parse_mode='HTML', reply_markup=reply_markup)
-        return CAR_COLOR
+        # context.user_data['car_type'] = update.message.text
+        # logger.info('Car type of %s: %s', user.first_name, update.message.text)
+
+        reply_keyboard = [[t.name] for t in TEAMS]
+
+        await update.message.reply_text(
+            '<b>Who spend money?\n</b>',
+            parse_mode='HTML',
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True),
+        )
+        return SPENDER
     else:
         ic(update.message.text)
         update_teams(text=update.message.text)
@@ -91,36 +83,17 @@ async def statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             '<b>Set statistics\n</b>',
             parse_mode='HTML',
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True),
-        )
+        )ß
         return STATISTICS
         
 
+async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ic(update.message.text)
+    await update.edit_message_text(text='<b>Please type in the mileage (e.g., 50000):</b>', parse_mode='HTML')
+    return AMOUNT
 
 
-
-async def car_color(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Stores the user's car color."""
-    query = update.callback_query
-    await query.answer()
-    context.user_data['car_color'] = query.data
-    await query.edit_message_text(
-        text=f'<b>You selected {query.data} color.\n'
-             f'Would you like to fill in the mileage for your car?</b>',
-        parse_mode='HTML'
-    )
-
-    # Define inline buttons for mileage decision
-    keyboard = [
-        [InlineKeyboardButton('Fill', callback_data='Fill')],
-        [InlineKeyboardButton('Skip', callback_data='Skip')],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.message.reply_text('<b>Choose an option:</b>', parse_mode='HTML', reply_markup=reply_markup)
-
-    return CAR_MILEAGE_DECISION
-
-
-async def car_mileage_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Asks the user to fill in the mileage or skip."""
     query = update.callback_query
     await query.answer()
@@ -229,8 +202,8 @@ def main() -> None:
         entry_points=[CommandHandler('start', start)],
         states={
             STATISTICS: [MessageHandler(filters.TEXT & ~filters.COMMAND, statistics)],
-            CAR_COLOR: [CallbackQueryHandler(car_color)],
-            CAR_MILEAGE_DECISION: [CallbackQueryHandler(car_mileage_decision)],
+            SPENDER: [CallbackQueryHandler(spender)],
+            AMOUNT: [CallbackQueryHandler(amount)],
             CAR_MILEAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, car_mileage)],
             PHOTO: [
                 MessageHandler(filters.PHOTO, photo),
