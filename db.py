@@ -45,12 +45,13 @@ class RDB:
             for key in keys:
                 final_hesab_team[key] += rezhesab[key]
 
-        record = records[-1]
-        rezhesab = json.loads(record[-1])
-        hesab = tuple([str(rezhesab[key]) for key in keys])
-        table.add_row(record[:4] + hesab, divider=True)  # Exclude the "rezhesab" column
-        for key in keys:
-            final_hesab_team[key] += rezhesab[key]
+        if records:
+            record = records[-1]
+            rezhesab = json.loads(record[-1])
+            hesab = tuple([str(rezhesab[key]) for key in keys])
+            table.add_row(record[:4] + hesab, divider=True)  # Exclude the "rezhesab" column
+            for key in keys:
+                final_hesab_team[key] += rezhesab[key]
 
         final_hesab_team_row = [final_hesab_team[key] for key in keys]
         total_amount = 0
