@@ -108,13 +108,15 @@ TEAMS_DEFAULT.append(Team("Aref", "Aref", "Nafise", 2, "Aref+", "Aref-", "🚕")
 TEAMS_DEFAULT.append(Team("Masoud", "Masoud", "Mahshid", 2, "Masoud+", "Masoud-", "🚛"))
 
 
-
 def update_teams(teams: dict, text: str)-> None:
     for team in teams:
         if text == team.addtext:
             team.n += 1 
         elif text == team.minustext:
             team.n -= 1
+
+        if team.n < 0:
+            team.n = 0
 
 # Top level conversation callbacks
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
@@ -172,11 +174,13 @@ async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
     ic("howmuch")
     ic(update.message.text)
-    if update.message.text in [t.name for t in context.user_data[TEAMS]]:
-        context.user_data['spender'] = update.message.text
-        await update.message.reply_text(text=f"<b>How much have you spend?</b> {update.message.text}\n", parse_mode='HTML')
-    else:
-        await update.message.reply_text(text=f"<b>How much have you spend?</b> {context.user_data['spender']}\n", parse_mode='HTML')
+    ic(context.user_data)
+
+    spender = update.message.text
+    if spender not in [t.name for t in context.user_data[TEAMS]]:
+        spender = context.user_data['spender']
+    context.user_data['spender'] = spender
+    await update.message.reply_text(text=f"<b>How much have you spend?</b> {spender}\n", parse_mode='HTML')
 
     return HOWMUCH
 
@@ -214,7 +218,18 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     # Insert a new record
     if howmuch != 0:
-        context.user_data[DB].insert_record(user.first_name, spender, howmuch, "cid")
+        n = sum([t.n for t in context.user_data[TEAMS]])
+        cost_per_person = howmuch / n
+        rezhesab_dict = {}
+        rezhesab_dict[spender] = 0
+        for t in context.user_data[TEAMS]:
+            if t.name != spender:
+                team_cost = t.n * cost_per_person
+                rezhesab_dict[t.name] = -team_cost
+                rezhesab_dict[spender] += team_cost
+
+        context.user_data[DB].insert_record(user.first_name, spender, howmuch, "cid", rezhesab_dict)
+
     await report(update, context)
 
 
