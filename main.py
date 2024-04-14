@@ -213,7 +213,8 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     howmuch = float(update.message.text)
 
     # Insert a new record
-    context.user_data[DB].insert_record(user.first_name, spender, howmuch, "cid")
+    if howmuch != 0:
+        context.user_data[DB].insert_record(user.first_name, spender, howmuch, "cid")
     await report(update, context)
 
 
@@ -226,10 +227,6 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # await update.message.reply_text(f'<pre>{table}</pre>', parse_mode=ParseMode.HTML)
     # or use markdown
     await update.message.reply_text(f'```{table}```', parse_mode=ParseMode.MARKDOWN_V2)
-
-    # print(table_string)
-    # await update.message.reply_text(table_string)
-
     return STOPPING
 
 
