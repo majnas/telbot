@@ -180,9 +180,6 @@ async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 
 async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
     ic("howmuch")
-    ic(update.message.text)
-    ic(context.user_data)
-
     spender = update.message.text
     if spender not in [t.name for t in context.user_data[TEAMS]]:
         spender = context.user_data['spender']
@@ -236,7 +233,7 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 rezhesab_dict[t.name] = -team_cost
                 rezhesab_dict[spender] += team_cost
 
-        context.user_data[DB].insert_record(user.first_name, spender, howmuch, "cid", rezhesab_dict)
+        context.user_data[DB].insert_record(user.first_name, spender, howmuch, cost_per_person, "cid", rezhesab_dict)
 
     await report(update, context)
 

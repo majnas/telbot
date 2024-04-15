@@ -12,13 +12,13 @@ class RDB:
 
     def _create_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS records
-                            (idx INTEGER PRIMARY KEY, user TEXT, spender TEXT, houmuch REAL, cid TEXT, rezhesab TEXT)''')
+                            (idx INTEGER PRIMARY KEY, user TEXT, spender TEXT, houmuch REAL, perperson REAL, cid TEXT, rezhesab TEXT)''')
         self.conn.commit()
 
-    def insert_record(self, user, spender, houmuch, cid, rezhesab_dict):
+    def insert_record(self, user, spender, houmuch, perperson, cid, rezhesab_dict):
         rezhesab_text = json.dumps(rezhesab_dict)  # Serialize dictionary to JSON string
-        self.cursor.execute('''INSERT INTO records (user, spender, houmuch, cid, rezhesab) VALUES (?, ?, ?, ?, ?)''',
-                            (user, spender, houmuch, cid, rezhesab_text))
+        self.cursor.execute('''INSERT INTO records (user, spender, houmuch, perperson, cid, rezhesab) VALUES (?, ?, ?, ?, ?, ?)''',
+                            (user, spender, houmuch, perperson, cid, rezhesab_text))
         self.conn.commit()
 
     def load_records(self):
@@ -38,25 +38,32 @@ class RDB:
         for key in keys:
             final_hesab_team[key] = 0
 
-        table = PrettyTable(["Index", "User", "Spender", "Amount"] + keys)
+        total_amount = 0
+        total_perperson = 0
+        table = PrettyTable(["Index", "User", "Spender", "Amount", "Perperson"] + keys)
         for record in records[:-1]:
+            Index, User, Spender, Amount, Perperson = record[:5]
+            total_amount += Amount
+            total_perperson += Perperson
             rezhesab = json.loads(record[-1])
             hesab = tuple(map(lambda key: "{:.2f}".format(rezhesab[key]), keys))
-            table.add_row(record[:4] + hesab)  # Exclude the "rezhesab" column
+            table.add_row((Index, User, Spender, Amount, round(Perperson, 2)) + hesab)  # Exclude the "rezhesab" column
             for key in keys:
                 final_hesab_team[key] += rezhesab[key]
 
         if records:
             record = records[-1]
+            Index, User, Spender, Amount, Perperson = record[:5]
+            total_amount += Amount
+            total_perperson += Perperson
             rezhesab = json.loads(record[-1])
             hesab = tuple(map(lambda key: "{:.2f}".format(rezhesab[key]), keys))
-            table.add_row(record[:4] + hesab, divider=True)  # Exclude the "rezhesab" column
+            table.add_row((Index, User, Spender, Amount, round(Perperson, 2)) + hesab, divider=True)  # Exclude the "rezhesab" column
             for key in keys:
                 final_hesab_team[key] += rezhesab[key]
 
         final_hesab_team_row = [str(round(float(final_hesab_team[key]), 1)) for key in keys]
-        total_amount = 0
-        table.add_row(["-", "-", "-", total_amount] + final_hesab_team_row)
+        table.add_row(["-", "-", "-", total_amount, total_perperson] + final_hesab_team_row)
 
         return table
 
