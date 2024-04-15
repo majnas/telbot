@@ -2,6 +2,7 @@ import sqlite3
 from prettytable import PrettyTable
 import json
 import collections
+from icecream import ic
 
 class RDB:
     def __init__(self, db_name):
@@ -40,9 +41,7 @@ class RDB:
         table = PrettyTable(["Index", "User", "Spender", "Amount"] + keys)
         for record in records[:-1]:
             rezhesab = json.loads(record[-1])
-            print(rezhesab)
-            print(keys)
-            hesab = tuple([str(rezhesab[key]) for key in keys])
+            hesab = tuple(map(lambda key: "{:.2f}".format(rezhesab[key]), keys))
             table.add_row(record[:4] + hesab)  # Exclude the "rezhesab" column
             for key in keys:
                 final_hesab_team[key] += rezhesab[key]
@@ -50,12 +49,12 @@ class RDB:
         if records:
             record = records[-1]
             rezhesab = json.loads(record[-1])
-            hesab = tuple([str(rezhesab[key]) for key in keys])
+            hesab = tuple(map(lambda key: "{:.2f}".format(rezhesab[key]), keys))
             table.add_row(record[:4] + hesab, divider=True)  # Exclude the "rezhesab" column
             for key in keys:
                 final_hesab_team[key] += rezhesab[key]
 
-        final_hesab_team_row = [final_hesab_team[key] for key in keys]
+        final_hesab_team_row = [str(round(float(final_hesab_team[key]), 1)) for key in keys]
         total_amount = 0
         table.add_row(["-", "-", "-", total_amount] + final_hesab_team_row)
 

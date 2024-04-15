@@ -131,7 +131,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
                 ["New"],
                 ["Done"]]
     await update.message.reply_text(
-        '<b>چکار میخوای بکنی؟:\n</b>',
+        '<b>چکار میخوای بکنی؟\n</b>',
         parse_mode='HTML',
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True))
 
@@ -188,7 +188,7 @@ async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ic("stop")
     """End Conversation by command."""
-    await update.message.reply_text("Okay, bye.")
+    await update.message.reply_text("مراقب خودت باش خوشگله 😉")
 
     # Close the connection
     context.user_data[DB].close_connection()
