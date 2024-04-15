@@ -59,6 +59,7 @@ END = ConversationHandler.END
 # Different constants for this example
 (
     DB,
+    DESC,
     SELECT_ACTION,
     SPENDER,
     DONE,   
@@ -74,7 +75,6 @@ END = ConversationHandler.END
     START_OVER,
     FEATURES,
     CURRENT_FEATURE,
-    CURRENT_LEVEL,
 ) = map(chr, range(13, 30))
 
 
@@ -178,13 +178,26 @@ async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
     return SPENDER
 
 
-async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    ic("howmuch")
+async def desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    ic("desc")
     spender = update.message.text
     if spender not in [t.name for t in context.user_data[TEAMS]]:
         spender = context.user_data['spender']
     context.user_data['spender'] = spender
     spender_farsi = next(team.name_farsi for team in context.user_data[TEAMS] if team.name == spender)
+    context.user_data['spender_farsi'] = spender_farsi
+    await update.message.reply_text(text=f"<b>{spender_farsi} جان خرج چی کردی؟</b>\n", parse_mode='HTML')
+
+    return DESC
+
+
+async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    ic("howmuch")
+    desc = update.message.text
+    # if spender not in [t.name for t in context.user_data[TEAMS]]:
+    #     desc = context.user_data['desc']
+    context.user_data['desc'] = desc
+    spender_farsi = context.user_data['spender_farsi']
     await update.message.reply_text(text=f"<b>{spender_farsi} جان چقدر خرج کردی؟</b>\n", parse_mode='HTML')
 
     return HOWMUCH
@@ -219,6 +232,7 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ic(user)
     
     spender = context.user_data['spender']
+    desc = context.user_data['desc']
     howmuch = float(update.message.text)
 
     # Insert a new record
@@ -233,7 +247,13 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 rezhesab_dict[t.name] = -team_cost
                 rezhesab_dict[spender] += team_cost
 
-        context.user_data[DB].insert_record(user.first_name, spender, howmuch, cost_per_person, "cid", rezhesab_dict)
+        context.user_data[DB].insert_record(user.first_name, 
+                                            spender, 
+                                            howmuch, 
+                                            cost_per_person, 
+                                            desc, 
+                                            "cid", 
+                                            rezhesab_dict)
 
     await report(update, context)
 
@@ -270,7 +290,8 @@ def main() -> None:
             STATISTICS: [MessageHandler(filters.Regex(r'^(?!Done).*$'), update_statistics),
                          MessageHandler(filters.Regex(r'^Done$'), spender)],
 
-            SPENDER: [MessageHandler(filters.TEXT & ~filters.COMMAND, howmuch)],
+            SPENDER: [MessageHandler(filters.TEXT & ~filters.COMMAND, desc)],
+            DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, howmuch)],
 
             HOWMUCH: [MessageHandler(filters.Regex(r'^\d+$'), store),
                       MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r'^\d+$'), howmuch)],
