@@ -80,6 +80,7 @@ END = ConversationHandler.END
 
 @dataclass
 class Team:
+    name_farsi: str
     name: str
     dad: str
     mon: str
@@ -101,12 +102,18 @@ class Record:
 
 
 TEAMS_DEFAULT: List[Team] = []
-TEAMS_DEFAULT.append(Team("مجید", "مجید", "صفورا", 3, "مجید+", "مجید-", "🚗"))
-TEAMS_DEFAULT.append(Team("محمد", "محمد", "صبا", 3, "محمد+", "محمد-", "🚛"))
-TEAMS_DEFAULT.append(Team("حسین", "حسین", "پریسا", 2, "حسین+", "حسین-","🏎️"))
-TEAMS_DEFAULT.append(Team("عارف", "عارف", "نفیسه", 2, "عارف+", "عارف-", "🚕"))
-TEAMS_DEFAULT.append(Team("مسعود", "مسعود", "مهشید", 2, "مسعود+", "مسعود-", "🚛"))
 
+TEAMS_DEFAULT.append(Team("مجید", "Majid", "Majid", "Safoura", 3, "Majid+", "Majid-", "🚗"))
+TEAMS_DEFAULT.append(Team("محمد", "Mammad", "Mammad", "Saba", 3, "Mammad+", "Mammad-",  "🚙"))
+TEAMS_DEFAULT.append(Team("حسین", "Hossein", "Hossein", "Parisa", 2, "Hossein+", "Hossein-","🏎️"))
+TEAMS_DEFAULT.append(Team("عارف", "Aref", "Aref", "Nafise", 2, "Aref+", "Aref-", "🚕"))
+TEAMS_DEFAULT.append(Team("مسعود", "Masoud", "Masoud", "Mahshid", 2, "Masoud+", "Masoud-", "🚛"))
+
+# TEAMS_DEFAULT.append(Team("مجید", "مجید", "صفورا", 3, "مجید+", "مجید-", "🚗"))
+# TEAMS_DEFAULT.append(Team("محمد", "محمد", "صبا", 3, "محمد+", "محمد-", "🚛"))
+# TEAMS_DEFAULT.append(Team("حسین", "حسین", "پریسا", 2, "حسین+", "حسین-","🏎️"))
+# TEAMS_DEFAULT.append(Team("عارف", "عارف", "نفیسه", 2, "عارف+", "عارف-", "🚕"))
+# TEAMS_DEFAULT.append(Team("مسعود", "مسعود", "مهشید", 2, "مسعود+", "مسعود-", "🚛"))
 
 def update_teams(teams: dict, text: str)-> None:
     for team in teams:
@@ -180,7 +187,8 @@ async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
     if spender not in [t.name for t in context.user_data[TEAMS]]:
         spender = context.user_data['spender']
     context.user_data['spender'] = spender
-    await update.message.reply_text(text=f"<b>{spender} جان چقدر خرج کردی؟</b>\n", parse_mode='HTML')
+    spender_farsi = next(team.name_farsi for team in context.user_data[TEAMS] if team.name == spender)
+    await update.message.reply_text(text=f"<b>{spender_farsi} جان چقدر خرج کردی؟</b>\n", parse_mode='HTML')
 
     return HOWMUCH
 
