@@ -101,11 +101,11 @@ class Record:
 
 
 TEAMS_DEFAULT: List[Team] = []
-TEAMS_DEFAULT.append(Team("Majid", "Majid", "Safoura", 3, "Majid+", "Majid-", "🚗"))
-TEAMS_DEFAULT.append(Team("Mammad", "Mammad", "Saba", 3, "Mammad+", "Mammad-",  "🚙"))
-TEAMS_DEFAULT.append(Team("Hossein", "Hossein", "Parisa", 2, "Hossein+", "Hossein-","🏎️"))
-TEAMS_DEFAULT.append(Team("Aref", "Aref", "Nafise", 2, "Aref+", "Aref-", "🚕"))
-TEAMS_DEFAULT.append(Team("Masoud", "Masoud", "Mahshid", 2, "Masoud+", "Masoud-", "🚛"))
+TEAMS_DEFAULT.append(Team("مجید", "مجید", "صفورا", 3, "مجید+", "مجید-", "🚗"))
+TEAMS_DEFAULT.append(Team("محمد", "محمد", "صبا", 3, "محمد+", "محمد-", "🚛"))
+TEAMS_DEFAULT.append(Team("حسین", "حسین", "پریسا", 2, "حسین+", "حسین-","🏎️"))
+TEAMS_DEFAULT.append(Team("عارف", "عارف", "نفیسه", 2, "عارف+", "عارف-", "🚕"))
+TEAMS_DEFAULT.append(Team("مسعود", "مسعود", "مهشید", 2, "مسعود+", "مسعود-", "🚛"))
 
 
 def update_teams(teams: dict, text: str)-> None:
@@ -131,7 +131,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
                 ["New"],
                 ["Done"]]
     await update.message.reply_text(
-        '<b>Setect Action:\n</b>',
+        '<b>چکار میخوای بکنی؟:\n</b>',
         parse_mode='HTML',
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True))
 
@@ -152,7 +152,7 @@ async def update_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     keyboard += [["Done"]]
 
     await update.message.reply_text(
-        '<b>Set statistics:\n</b>',
+        '<b>تعداد افراد هر تیم👫\n</b>',
         parse_mode='HTML',
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True))
 
@@ -164,7 +164,7 @@ async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
     keyboard = [[t.name] for t in context.user_data[TEAMS]]
 
     await update.message.reply_text(
-        '<b>Who spend money?\n</b>',
+        '<b>کی خرج کرده؟\n</b>',
         parse_mode='HTML',
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True),
     )
@@ -180,7 +180,7 @@ async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
     if spender not in [t.name for t in context.user_data[TEAMS]]:
         spender = context.user_data['spender']
     context.user_data['spender'] = spender
-    await update.message.reply_text(text=f"<b>How much have you spend?</b> {spender}\n", parse_mode='HTML')
+    await update.message.reply_text(text=f"<b>{spender} جان چقدر خرج کردی؟</b>\n", parse_mode='HTML')
 
     return HOWMUCH
 

@@ -40,6 +40,8 @@ class RDB:
         table = PrettyTable(["Index", "User", "Spender", "Amount"] + keys)
         for record in records[:-1]:
             rezhesab = json.loads(record[-1])
+            print(rezhesab)
+            print(keys)
             hesab = tuple([str(rezhesab[key]) for key in keys])
             table.add_row(record[:4] + hesab)  # Exclude the "rezhesab" column
             for key in keys:
