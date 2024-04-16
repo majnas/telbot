@@ -64,7 +64,7 @@ END = ConversationHandler.END
     SPENDER,
     DONE,   
     TEAMS,
-    PARENTS,
+    DELREC,
     CHILDREN,
     SELF,
     GENDER,
@@ -136,7 +136,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 
     keyboard = [["Report"],
                 ["New"],
-                ["Done"]]
+                ["Delete"],
+                ["Done"],]
     await update.message.reply_text(
         '<b>چکار میخوای بکنی؟\n</b>',
         parse_mode='HTML',
@@ -164,6 +165,12 @@ async def update_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, is_persistent=True))
 
     return STATISTICS
+
+
+async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    ic("delete_record")
+    await update.message.reply_text(text=f"<b>کدوم ردیف رو میخوای حذف کنی؟</b>\n", parse_mode='HTML')
+    return DELREC
 
 
 async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
@@ -225,6 +232,16 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 #     return END
 
 
+async def which_record(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    ic("which_record")
+    user = update.message.from_user    
+    idx = int(update.message.text) + 1
+
+    # Insert a new record
+    context.user_data[DB].delete_record_by_index(idx)
+    return STOPPING
+
+
 async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ic("store")
     """Report conversation from InlineKeyboardButton."""
@@ -255,7 +272,7 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                                             "cid", 
                                             rezhesab_dict)
 
-    await report(update, context)
+    return await report(update, context)
 
 
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -285,6 +302,7 @@ def main() -> None:
         states={
             SELECT_ACTION: [MessageHandler(filters.Regex(r'^Report$'), report),
                             MessageHandler(filters.Regex(r'^New$'), update_statistics),
+                            MessageHandler(filters.Regex(r'^Delete$'), delete_record),
                             MessageHandler(filters.Regex(r'^Done$'), stop)],
 
             STATISTICS: [MessageHandler(filters.Regex(r'^(?!Done).*$'), update_statistics),
@@ -295,6 +313,8 @@ def main() -> None:
 
             HOWMUCH: [MessageHandler(filters.Regex(r'^\d+$'), store),
                       MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r'^\d+$'), howmuch)],
+
+            DELREC: [MessageHandler(filters.Regex(r'^\d+$'), which_record)],
 
             STOPPING: [CommandHandler("start", start)],
         },

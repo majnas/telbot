@@ -25,6 +25,10 @@ class RDB:
         self.cursor.execute('''SELECT * FROM records''')
         return self.cursor.fetchall()
 
+    def delete_record_by_index(self, index):
+        self.cursor.execute('''DELETE FROM records WHERE idx = ?''', (index,))
+        self.conn.commit()
+
     def get_table_as_string(self):
         records = self.load_records()
 
@@ -47,7 +51,7 @@ class RDB:
             total_perperson += Perperson
             rezhesab = json.loads(record[-1])
             hesab = tuple(map(lambda key: "{:.2f}".format(rezhesab[key]), keys))
-            table.add_row((Index, User, Spender, Amount, round(Perperson, 2), Desc) + hesab)  # Exclude the "rezhesab" column
+            table.add_row((Index - 1, User, Spender, Amount, round(Perperson, 2), Desc) + hesab)  # Exclude the "rezhesab" column
             for key in keys:
                 final_hesab_team[key] += rezhesab[key]
 
@@ -58,7 +62,7 @@ class RDB:
             total_perperson += Perperson
             rezhesab = json.loads(record[-1])
             hesab = tuple(map(lambda key: "{:.2f}".format(rezhesab[key]), keys))
-            table.add_row((Index, User, Spender, Amount, round(Perperson, 2), Desc) + hesab, divider=True)  # Exclude the "rezhesab" column
+            table.add_row((Index -1, User, Spender, Amount, round(Perperson, 2), Desc) + hesab, divider=True)  # Exclude the "rezhesab" column
             for key in keys:
                 final_hesab_team[key] += rezhesab[key]
 
