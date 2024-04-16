@@ -14,6 +14,7 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
+import os
 import logging
 from typing import Any, Dict, Tuple
 from telegram.constants import ParseMode
@@ -27,6 +28,7 @@ from telegram.ext import (
     ConversationHandler,
     MessageHandler,
     filters,
+    CallbackContext
 )
 from icecream import ic
 from dataclasses import dataclass
@@ -207,7 +209,7 @@ async def which_record(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     # Insert a new record
     context.user_data[DB].delete_record_by_index(idx)
 
-    return STOPPING
+    return await report(update, context)
 
 
 async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -249,7 +251,14 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # await update.message.reply_text(f'<pre>{table}</pre>', parse_mode=ParseMode.HTML)
     # or use markdown
     await update.message.reply_text(f'```{table}```', parse_mode=ParseMode.MARKDOWN_V2)
+    return await pdf(update, context)
+
+
+def pdf(update: Update, context: CallbackContext) -> None:
+    pdf_file_path = 'vicroad.pdf'
+    context.bot.send_document(chat_id=update.message.chat_id, document=open(pdf_file_path, 'rb'))
     return STOPPING
+
 
 
 def main() -> None:
