@@ -69,7 +69,7 @@ class RDB:
         final_hesab_team_row = [str(round(float(final_hesab_team[key]), 1)) for key in keys]
         total_amount = round(total_amount, 2)
         total_perperson = round(total_perperson, 2)
-        table.add_row(["-", "-", "-", total_amount, total_perperson, "-"] + final_hesab_team_row)
+        table.add_row(["-", "-", "total", total_amount, total_perperson, "-"] + final_hesab_team_row)
 
         return table
 
