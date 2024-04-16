@@ -32,7 +32,7 @@ from icecream import ic
 from dataclasses import dataclass
 from typing import List
 from db import RDB
-
+import re
 
 # Enable logging
 logging.basicConfig(
@@ -109,12 +109,6 @@ TEAMS_DEFAULT.append(Team("حسین", "Hossein", "Hossein", "Parisa", 2, "Hossei
 TEAMS_DEFAULT.append(Team("عارف", "Aref", "Aref", "Nafise", 2, "Aref+", "Aref-", "🚕"))
 TEAMS_DEFAULT.append(Team("مسعود", "Masoud", "Masoud", "Mahshid", 2, "Masoud+", "Masoud-", "🚛"))
 
-# TEAMS_DEFAULT.append(Team("مجید", "مجید", "صفورا", 3, "مجید+", "مجید-", "🚗"))
-# TEAMS_DEFAULT.append(Team("محمد", "محمد", "صبا", 3, "محمد+", "محمد-", "🚛"))
-# TEAMS_DEFAULT.append(Team("حسین", "حسین", "پریسا", 2, "حسین+", "حسین-","🏎️"))
-# TEAMS_DEFAULT.append(Team("عارف", "عارف", "نفیسه", 2, "عارف+", "عارف-", "🚕"))
-# TEAMS_DEFAULT.append(Team("مسعود", "مسعود", "مهشید", 2, "مسعود+", "مسعود-", "🚛"))
-
 def update_teams(teams: dict, text: str)-> None:
     for team in teams:
         if text == team.addtext:
@@ -127,9 +121,6 @@ def update_teams(teams: dict, text: str)-> None:
 
 # Top level conversation callbacks
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    """Select an action: Adding parent/child or show data."""
-    ic("start")
-
     # Create an instance of RecordsDB
     db = RDB('records.db')
     context.user_data[DB] = db
@@ -150,11 +141,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 
 
 async def update_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    ic("update_statistics")
     if update.message.text != "New":
         update_teams(context.user_data[TEAMS], update.message.text)
-
-    # [ic(t) for t in context.user_data[TEAMS]]
 
     keyboard = [[t.minustext, str(t.n), t.addtext] for t in context.user_data[TEAMS]]
     keyboard += [["Done"]]
@@ -168,13 +156,11 @@ async def update_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    ic("delete_record")
     await update.message.reply_text(text=f"<b>کدوم ردیف رو میخوای حذف کنی؟</b>\n", parse_mode='HTML')
     return DELREC
 
 
 async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    ic("spender")
     keyboard = [[t.name] for t in context.user_data[TEAMS]]
 
     await update.message.reply_text(
@@ -186,7 +172,6 @@ async def spender(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 
 
 async def desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    ic("desc")
     spender = update.message.text
     if spender not in [t.name for t in context.user_data[TEAMS]]:
         spender = context.user_data['spender']
@@ -199,10 +184,7 @@ async def desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 
 
 async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    ic("howmuch")
     desc = update.message.text
-    # if spender not in [t.name for t in context.user_data[TEAMS]]:
-    #     desc = context.user_data['desc']
     context.user_data['desc'] = desc
     spender_farsi = context.user_data['spender_farsi']
     await update.message.reply_text(text=f"<b>{spender_farsi} جان چقدر خرج کردی؟</b>\n", parse_mode='HTML')
@@ -211,7 +193,6 @@ async def howmuch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
 
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    ic("stop")
     """End Conversation by command."""
     await update.message.reply_text("مراقب خودت باش خوشگله 😉")
 
@@ -221,32 +202,17 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return STOPPING
 
 
-# async def end(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-#     ic("end")
-#     """End conversation from InlineKeyboardButton."""
-#     await update.callback_query.answer()
-
-#     text = "See you around!"
-#     await update.callback_query.edit_message_text(text=text)
-
-#     return END
-
-
 async def which_record(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    ic("which_record")
-    user = update.message.from_user    
     idx = int(update.message.text) + 1
-
     # Insert a new record
     context.user_data[DB].delete_record_by_index(idx)
+
     return STOPPING
 
 
 async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    ic("store")
     """Report conversation from InlineKeyboardButton."""
     user = update.message.from_user
-    ic(user)
     
     spender = context.user_data['spender']
     desc = context.user_data['desc']
@@ -276,7 +242,6 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    ic("report")
     table = context.user_data[DB].get_table_as_string()
 
     # https://stackoverflow.com/questions/49345960/how-do-i-send-tables-with-telegram-bot-api
@@ -311,7 +276,7 @@ def main() -> None:
             SPENDER: [MessageHandler(filters.TEXT & ~filters.COMMAND, desc)],
             DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, howmuch)],
 
-            HOWMUCH: [MessageHandler(filters.Regex(r'^\d+$'), store),
+            HOWMUCH: [MessageHandler(filters.Regex(re.compile(r'^\d+(\.\d+)?$')), store),
                       MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r'^\d+$'), howmuch)],
 
             DELREC: [MessageHandler(filters.Regex(r'^\d+$'), which_record)],
