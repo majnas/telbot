@@ -39,3 +39,36 @@ To run the telbot Telegram bot locally, follow these steps:
 - `prettytable`: Library for generating ASCII tables for report formatting.
 - `fpdf`: Library for creating PDF files programmatically.
 - `python-dotenv`: Library for loading environment variables from a .env file.
+
+## telbot menu
+<table style="width:100%">
+  <tr>
+    <td style="text-align:center; padding: 5px;">
+      <img src="./data/1.jpg" alt="Image 1" style="width: 100%;">
+    </td>
+    <td style="text-align:center; padding: 5px;">
+      <img src="./data/2.jpg" alt="Image 2" style="width: 100%;">
+    </td>
+    <td style="text-align:center; padding: 5px;">
+      <img src="./data/3.jpg" alt="Image 3" style="width: 100%;">
+    </td>
+    <td style="text-align:center; padding: 5px;">
+      <img src="./data/4.jpg" alt="Image 4" style="width: 100%;">
+    </td>
+  </tr>
+</table>
+
+## Sample output report in text file
+```
++-------+-------+---------+---------+-----------+--------+---------+---------+---------+---------+--------+
+| Index |  User | Spender |  Amount | Perperson |  Desc  |   Aref  |  Mammad |  Masoud | Hossein | Majid  |
++-------+-------+---------+---------+-----------+--------+---------+---------+---------+---------+--------+
+|   2   | Majid |  Majid  |  999.0  |   83.25   | sdfsf  | -166.50 | -249.75 | -166.50 | -166.50 | 749.25 |
+|   3   | Majid | Hossein |   13.0  |    1.3    | lavash |  -2.60  |  -3.90  |  -2.60  |  13.00  | -3.90  |
+|   5   | Majid | Hossein |   6.32  |    0.53   |  rrrr  |  -1.05  |  -1.58  |  -1.05  |   5.27  | -1.58  |
+|   6   | Majid |  Majid  |   43.0  |    3.58   | Kabab  |  -7.17  |  -10.75 |  -7.17  |  -7.17  | 32.25  |
++-------+-------+---------+---------+-----------+--------+---------+---------+---------+---------+--------+
+|   -   |   -   |  total  | 1061.32 |   88.66   |   -    |  -177.3 |  -266.0 |  -177.3 |  -155.4 | 776.0  |
++-------+-------+---------+---------+-----------+--------+---------+---------+---------+---------+--------+
+
+```
