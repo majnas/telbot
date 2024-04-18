@@ -2,7 +2,6 @@ import sqlite3
 from prettytable import PrettyTable
 import json
 import collections
-from icecream import ic
 
 class RDB:
     def __init__(self, db_name):

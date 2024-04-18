@@ -19,10 +19,9 @@ import logging
 from typing import Any, Dict, Tuple
 from telegram.constants import ParseMode
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
+from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import (
     Application,
-    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     ConversationHandler,
@@ -30,15 +29,11 @@ from telegram.ext import (
     filters,
     CallbackContext
 )
-from icecream import ic
 from dataclasses import dataclass
 from typing import List
 from db import RDB
 import re
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from PIL import Image, ImageDraw, ImageFont
-from fpdf import FPDF
+import utils
 
 # Enable logging
 logging.basicConfig(
@@ -50,38 +45,10 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # State definitions for top level conversation
-NEW_RECORD, STATISTICS, HOWMUCH, DESCRIBING_SELF = map(chr, range(4))
-# State definitions for second level conversation
-SELECTING_LEVEL, SELECTING_GENDER = map(chr, range(4, 6))
-# State definitions for descriptions conversation
-SELECTING_FEATURE, TYPING = map(chr, range(6, 8))
-# Meta states
-STOPPING, REPORT = map(chr, range(8, 10))
-# mystates
-REPORT, EXPORT = map(chr, range(10, 12))
-# Shortcut for ConversationHandler.END
-END = ConversationHandler.END
+STATISTICS, HOWMUCH, SELECT_ACTION, STOPPING, REPORT, DESC, SPENDER, DELREC = map(chr, range(8))
 
 # Different constants for this example
-(
-    DB,
-    DESC,
-    SELECT_ACTION,
-    SPENDER,
-    DONE,   
-    TEAMS,
-    DELREC,
-    CHILDREN,
-    SELF,
-    GENDER,
-    MALE,
-    FEMALE,
-    AGE,
-    NAME,
-    START_OVER,
-    FEATURES,
-    CURRENT_FEATURE,
-) = map(chr, range(13, 30))
+DB, TEAMS = map(chr, range(8, 10))
 
 
 @dataclass
@@ -209,9 +176,11 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def which_record(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.message.from_user
     idx = int(update.message.text) + 1
     # Insert a new record
     context.user_data[DB].delete_record_by_index(idx)
+    logger.info(f"{user.first_name}: deleted record with idx={idx-1}")
 
     return await report(update, context)
 
@@ -243,6 +212,7 @@ async def store(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                                             desc, 
                                             "cid", 
                                             rezhesab_dict)
+    logger.info(f"{user.first_name}: {spender} spend {howmuch}$ for {desc}")
 
     return await report(update, context)
 
@@ -254,8 +224,8 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(f'<pre>{table}</pre>', parse_mode=ParseMode.HTML)
     # or use markdown
     # await update.message.reply_text(f'```{table}```', parse_mode=ParseMode.MARKDOWN_V2)
-    create_pdf_with_text("report.pdf", table)
-    create_txt("report.txt", table.get_string())
+    utils.create_pdf_with_text("report.pdf", table)
+    utils.create_txt("report.txt", table.get_string())
     return await pdf(update, context)
 
 async def pdf(update: Update, context: CallbackContext) -> None:
@@ -270,81 +240,7 @@ async def pdf(update: Update, context: CallbackContext) -> None:
 
     return STOPPING
 
-def create_pdf_with_text(file_path, text):
-    header, data = get_data_from_prettytable(text)
-    export_to_pdf(file_path, header, data)
 
-def create_txt(file_path, text):
-    with open(file_path, 'w') as f:
-        f.write(text)
-
-def get_data_from_prettytable(x):
-    """
-    Get a list of list from pretty_data table
-    Arguments:
-        :param data: data table to process
-        :type data: PrettyTable
-    """
-
-    def remove_space(liste):
-        """
-        Remove space for each word in a list
-        Arguments:
-            :param liste: list of strings
-        """   
-        list_without_space = []
-        for mot in liste:                                       # For each word in list
-            word_without_space = mot.replace(' ', '')           # word without space
-            list_without_space.append(word_without_space)       # list of word without space
-        return list_without_space
-
-    # Get each row of the table
-    string_x = str(x).split('\n')                               # Get a list of row
-    header = string_x[1].split('|')[1: -1]                      # Columns names
-    rows = string_x[3:len(string_x) - 1]                        # List of rows
-
-    list_word_per_row = []
-    for row in rows:                                            # For each word in a row
-        row_resize = row.split('|')[1:-1]                       # Remove first and last arguments
-        list_word_per_row.append(remove_space(row_resize))      # Remove spaces
-
-    return header, list_word_per_row
-
-
-def export_to_pdf(file_path, header, data):
-    """
-    Create a a table in PDF file from a list of row
-        :param header: columns name
-        :param data: List of row (a row = a list of cells)
-        :param spacing=1: 
-    """
-    pdf = FPDF(orientation='landscape')                                # New  pdf object
-
-    pdf.set_font("Arial", size=6)              # Font style
-    epw = pdf.w - 2*pdf.l_margin                # Witdh of document
-    col_width = pdf.w / 15                     # Column width in table
-    row_height = pdf.font_size * 3            # Row height in table
-    spacing = 0.8                               # Space in each cell
-
-    pdf.add_page()                              # add new page
-
-    pdf.cell(epw, 0.0, 'My title', align='C')   # create title cell
-    pdf.ln(row_height*spacing)                  # Define title line style
-
-    # Add header
-    for item in header:                         # for each column
-        pdf.cell(col_width, row_height*spacing, # Add a new cell
-                 txt=item, border=1)
-    pdf.ln(row_height*spacing)                  # New line after header
-
-    for row in data:                            # For each row of the table
-        for item in row:                        # For each cell in row
-            pdf.cell(col_width, row_height*spacing, # Add cell
-                    txt=item, border=1)
-        pdf.ln(row_height*spacing)              # Add line at the end of row
-
-    pdf.output(file_path)                       # Create pdf file 
-    pdf.close()                                 # Close file
 
 
 
