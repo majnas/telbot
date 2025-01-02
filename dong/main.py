@@ -76,11 +76,11 @@ class Record:
 
 TEAMS_DEFAULT: List[Team] = []
 
-TEAMS_DEFAULT.append(Team("مجید", "Majid", "Majid", "Safoura", 3, "Majid+", "Majid-", "🚗"))
-TEAMS_DEFAULT.append(Team("محمد", "Mammad", "Mammad", "Saba", 3, "Mammad+", "Mammad-",  "🚙"))
+TEAMS_DEFAULT.append(Team("مجید", "Majid", "Majid", "Safoura", 1, "Majid+", "Majid-", "🚗"))
+TEAMS_DEFAULT.append(Team("محمد", "Mammad", "Mammad", "Saba", 2, "Mammad+", "Mammad-",  "🚙"))
 TEAMS_DEFAULT.append(Team("حسین", "Hossein", "Hossein", "Parisa", 2, "Hossein+", "Hossein-","🏎️"))
 TEAMS_DEFAULT.append(Team("عارف", "Aref", "Aref", "Nafise", 2, "Aref+", "Aref-", "🚕"))
-TEAMS_DEFAULT.append(Team("مسعود", "Masoud", "Masoud", "Mahshid", 2, "Masoud+", "Masoud-", "🚛"))
+TEAMS_DEFAULT.append(Team("بابک", "Babak", "Babak", "Zahra", 2, "Babak+", "Babak-", "🚛"))
 
 def update_teams(teams: dict, text: str)-> None:
     for team in teams:
